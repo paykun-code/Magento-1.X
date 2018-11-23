@@ -32,5 +32,6 @@ Note: Please backup your running source code and database first.
       * Debug                   - For trouble shooting, also enable magento log from the Configuration > Advanced > Log Settings > Set Enabled to Yes
 
   10. Now you will be able to see paykun payment method in the checkout page.
+  
 
 #<h3> In case of any query, please contact to support@paykun.com.</h3>
