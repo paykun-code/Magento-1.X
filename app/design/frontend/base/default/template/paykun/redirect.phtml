@@ -1,0 +1,45 @@
+<?php
+/*$_order = new Mage_Sales_Model_Order();
+
+// Get this guys last order
+$orderId = Mage::getSingleton('checkout/session')->getLastRealOrderId();
+$_order->loadByIncrementId($orderId);*/
+?>
+<br>
+<br>
+<!-- We can peacefully add some nice redirection here with some intentional delay -->
+
+<?php if(!$isErrorExist) {?>
+    <div style="text-align:center">
+        <h2>We are redirecting you to Paykun payment. Please wait ...</h2>
+        <br>
+        <!--<img src="http://i.imgur.com/KUJoe.gif" />-->
+    </div>
+    <!-- Hidden form to submit -->
+
+    <form name="server_request" method="post" action="<?php echo $data['gateway_url']; ?>">
+        <table width="80%" align="center" border="0" cellpadding="0" cellspacing="0">
+            <tr>
+                <td><input type="hidden" name="encrypted_request" id="encrypted_request" value="<?php echo $data['encrypted_request']?>" /></td>
+            </tr>
+            <tr>
+                <td><input type="hidden" name="merchant_id" id="merchant_id" value="<?php echo $data['merchant_id'] ?>" /></td>
+            </tr>
+            <tr>
+                <td><input type="hidden" name="access_token" id="access_token" value="<?php echo $data['access_token'] ?>"></td>
+            </tr>
+        </table>
+    </form>
+    <script type="text/javascript">
+        document.server_request.submit();
+    </script>
+<?php } else { ?>
+
+    <div style="text-align:center">
+        <h2><strong>Paykun: </strong><?php echo $data ?></h2>
+    <br>
+    <!--<img src="http://i.imgur.com/KUJoe.gif" />-->
+</div>
+
+<?php } ?>
+
