@@ -20,13 +20,15 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
     private $_orderTransactionId;
     private $_paykunTransactionId;
     private $_orderId;
-    const ALLOWED_CURRENCIES = ['INR'];
+
+    protected $ALLOWED_CURRENCIES = array('INR');
 
     private $_isLogEnabled;
     private $_merchantId;
     private $_accessToken;
     private $_encKey;
     private $_isFieldError = false;
+    private $isLive = true;
     private function setConfig() {
 
         $storeId = Mage::app()->getStore()->getStoreId();
@@ -36,6 +38,7 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
         $this->_merchantId = Mage::getStoreConfig('payment/pcheckout/merchant_id', $storeId);
         $this->_accessToken = Mage::getStoreConfig('payment/pcheckout/auth_token', $storeId);
         $this->_encKey = Mage::getStoreConfig('payment/pcheckout/enc_key', $storeId);
+        $this->isLive = (Mage::getStoreConfig('payment/pcheckout/is_live', $storeId) == 1) ? true: false;
 //        $this->_merchantId = "";
 
     }
@@ -119,7 +122,7 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
 
             $order->save();
 
-            $requestData = [
+            $requestData = array(
                 /*Merchant detail*/
                 'merchantId' => $this->_merchantId, 'accessToken'   => $this->_accessToken, 'encKey' => $this->_encKey,
 
@@ -145,7 +148,7 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
                 'b_city'    => $order->getBillingAddress()->getCity(),
                 'b_pincode' => $order->getBillingAddress()->getPostcode(),
                 'b_address' => $order->getBillingAddress()->getStreet()
-            ];
+            );
 
             $request = $this->getPaykunPaymentRequest($requestData, true);
 
@@ -167,7 +170,7 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
 
     private function isGivenCurrencyAllowed($order) {
 
-        if(!in_array($order->getOrderCurrencyCode(), self::ALLOWED_CURRENCIES)) {
+        if(!in_array($order->getOrderCurrencyCode(), $this->ALLOWED_CURRENCIES)) {
 
             $order->setState(Mage_Sales_Model_Order::STATE_CANCELED, true)->save();
             Mage::getSingleton('core/session')->addError(
@@ -216,7 +219,7 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
                 ", amount=> ".$data['amount']
             );
 
-            $obj = new Paykun_Pcheckout_PkPaymentController($data['merchantId'], $data['accessToken'], $data['encKey'], true, true);
+            $obj = new Paykun_Pcheckout_PkPaymentController($data['merchantId'], $data['accessToken'], $data['encKey'], $this->isLive, true);
 
             // Initializing Order
             $obj->initOrder($data['orderId'], $data['purpose'], $data['amount'], $data['successUrl'],  $data['failedUrl']);
@@ -234,7 +237,7 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
 
             //Render template and submit the form
 
-            $obj->setCustomFields(['udf_1' => $this->_orderTransactionId, 'udf_2' => $this->_orderId]);
+            $obj->setCustomFields(array('udf_1' => $this->_orderTransactionId, 'udf_2' => $this->_orderId));
 
             return $obj->submit($shouldEncrypt);
 
@@ -266,7 +269,6 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
         $this->addLog("Payment ID: $this->_paykunTransactionId");
         $response           = $this->_getcurlInfo($this->_paykunTransactionId);
 
-
         if(isset($response['status']) && $response['status'] == "1" || $response['status'] == 1 ) {
             $payment_status = $response['data']['transaction']['status'];
 
@@ -277,7 +279,9 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
                 $this->_orderId = $response['data']['transaction']['custom_field_2'];
                 $order->loadByIncrementId($this->_orderId);
 
-                if(($order->getBaseGrandTotal()	== $resAmout)) {
+                if((floor($order->getBaseGrandTotal())== floor($resAmout))) {
+
+
                     $this->addLog("Value of Tran-order ID: ");
                     $this->_orderTransactionId  = $response['data']['transaction']['custom_field_1'];
                     // Get order details
@@ -287,7 +291,7 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
                     $this->addLog("Pending payment is set to False");
                     $this->sendOrderMail();
                     $order->save();
-                    $this->updateTransaction($order->getPayment(), $resAmout);
+                    $this->updateTransaction($order->getPayment(), $resAmout, 'Success');
                     Mage::getSingleton('core/session')->addSuccess("Thank you for your order. Your order is successfully placed with the order Id #".$order->getIncrementId());
                     $this->_redirect('checkout/onepage/success', array('_secure'=>true));
 
@@ -310,7 +314,6 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
                 }
                 $this->_redirect('');
             }
-
         }
 
     }
@@ -351,7 +354,7 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
             //Make this order status as a cancel
             $order->cancel()->setState(Mage_Sales_Model_Order::STATE_CANCELED, true,
                 'Payment failed with transaction id => '. $this->_paykunTransactionId)->save();
-            $this->updateTransaction($order->getPayment(), $amount);
+            $this->updateTransaction($order->getPayment(), $amount, 'Failed');
             /*Restore cart back to it's previous state*/
             $this->saveItemsBackToCart($order->getItemsCollection(), $session);
 
@@ -366,7 +369,7 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
         $this->_redirect('checkout/cart');
     }
 
-    private function updateTransaction($payment, $amount, $status = 0) {
+    private function updateTransaction($payment, $amount, $status = 'False') {
 
         //Get transaction id when transaction was saved with transaction id and then try to fetch the order
         // I was here and getting an error
@@ -374,19 +377,23 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
 
         //$data = $transaction->getAdditionalInformation();
         //$url = $data['raw_details_info']['Url'];
+
         $transaction->setAdditionalInformation(Mage_Sales_Model_Order_Payment_Transaction::RAW_DETAILS,
             array(
-                'PaykunId TXN Id'   => $this->_orderTransactionId,
+                'PaykunId TXN Id'   => $this->_paykunTransactionId,
                 'Context'           => 'Token payment',
-                'Amount'            => $amount,
+                /*'Amount'            => $amount,*/
                 'Status'            => $status,
+                'Parent Transaction Id' => $this->_orderTransactionId
                 //'Url'=>$url
             )
         )->save();
+
         $transaction->setParentTxnId($this->_orderTransactionId)->save();
         $payment->setIsTransactionClosed(1);
         $payment->save();
         $transaction->save();
+
     }
 
     private function saveItemsBackToCart($items, $session) {
@@ -441,17 +448,26 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
 
         try {
 
+            $cUrl        = 'https://api.paykun.com/v1/merchant/transaction/' . $iTransactionId . '/';
+            if(!$this->isLive) {
+                $cUrl        = 'https://sandbox.paykun.com/api/v1/merchant/transaction/' . $iTransactionId . '/';
+            }
             $storeId    = Mage::app()->getStore()->getStoreId();
             $storeCode  = Mage::app()->getStore()->getCode();
 
             $this->addLog("Store ID and Code: $storeId | $storeCode");
-            $cUrl        = 'https://api.paykun.com/v1/merchant/transaction/' . $iTransactionId . '/';
+
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $cUrl);
             curl_setopt($ch, CURLOPT_HEADER, FALSE);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
             curl_setopt($ch, CURLOPT_HTTPHEADER, array("MerchantId:$this->_merchantId", "AccessToken:$this->_accessToken"));
+            if( isset($_SERVER['HTTPS'] ) ) {
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, TRUE);
+            } else {
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+            }
 
             $response       = curl_exec($ch);
             $error_number   = curl_errno($ch);
@@ -476,12 +492,4 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
 
     }
 
-}
-/*remove this function on the production environment*/
-function debug($data, $isExit = false) {
-    echo "<pre>";
-    print_r($data);
-    if($isExit === true) {
-        exit;
-    }
 }

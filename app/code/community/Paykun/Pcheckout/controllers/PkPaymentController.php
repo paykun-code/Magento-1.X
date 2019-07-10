@@ -48,12 +48,13 @@ class Paykun_Pcheckout_PkPaymentController {
     public $udf_5;
 
     /**
-     * Payment constructor.
-     * @param string $mid           => Id of the Merchant
-     * @param string $accessToken   => Access token
-     * @param string $encKey        => Encryption key
-     * @param bool $isLive          => Sandbox or production mode flag
-     * @throws Errors\ValidationException
+     * Paykun_Pcheckout_PkPaymentController constructor.
+     * @param $mid
+     * @param $accessToken
+     * @param $encKey
+     * @param bool $isLive
+     * @param bool $isCustomTemplate
+     * @throws Paykun_Checkout_Errors_ValidationExceptionController
      */
 
     public function __construct($mid, $accessToken, $encKey, $isLive = true, $isCustomTemplate = false) {
