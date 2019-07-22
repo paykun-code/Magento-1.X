@@ -290,6 +290,7 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
                     $order->setState(Mage_Sales_Model_Order::STATE_PROCESSING, true);
                     $this->addLog("Pending payment is set to False");
                     $this->sendOrderMail();
+                    $order->addStatusHistoryComment('Order paid with Paykun Transaction ID: '.$this->_paykunTransactionId);
                     $order->save();
                     $this->updateTransaction($order->getPayment(), $resAmout, 'Success');
                     Mage::getSingleton('core/session')->addSuccess("Thank you for your order. Your order is successfully placed with the order Id #".$order->getIncrementId());
