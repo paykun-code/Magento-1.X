@@ -279,7 +279,7 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
                 $this->_orderId = $response['data']['transaction']['custom_field_2'];
                 $order->loadByIncrementId($this->_orderId);
 
-                if((floor($order->getBaseGrandTotal())== floor($resAmout))) {
+                if((intval($order->getBaseGrandTotal())== intval($resAmout))) {
 
 
                     $this->addLog("Value of Tran-order ID: ");
