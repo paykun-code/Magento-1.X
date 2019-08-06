@@ -48,7 +48,7 @@
                 <active>1</active>
                 <model>pcheckout/PaymentMethod</model>
                 <order_status>pending</order_status>
-                <title>Paykun</title>
+                <title>Pay via Cards/Net-Banking/UPI/Wallets/QR Code with PayKun</title>
             </pcheckout>
         </payment>
     </default>
