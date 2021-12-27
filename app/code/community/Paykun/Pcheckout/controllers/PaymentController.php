@@ -170,7 +170,7 @@ class Paykun_Pcheckout_PaymentController extends Mage_Core_Controller_Front_Acti
 
     private function isGivenCurrencyAllowed($order) {
 
-        if(!in_array($order->getOrderCurrencyCode(), $this->ALLOWED_CURRENCIES)) {
+        if($order->getOrderCurrencyCode()) {
 
             $order->setState(Mage_Sales_Model_Order::STATE_CANCELED, true)->save();
             Mage::getSingleton('core/session')->addError(
